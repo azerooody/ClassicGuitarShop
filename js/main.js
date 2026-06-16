@@ -1,26 +1,40 @@
 function getCart() {
-    try { return JSON.parse(localStorage.getItem('cart')) || []; } catch(e) { return []; }
+    try {
+        var data = JSON.parse(localStorage.getItem('cart'));
+        if (Array.isArray(data)) return data;
+    } catch (e) {}
+    return [];
 }
+
 function saveCart(cart) {
     localStorage.setItem('cart', JSON.stringify(cart));
-    updateCartBadge();
+    updateCartZnachok();
 }
+
 function addToCart(productId) {
     var cart = getCart();
     for (var i = 0; i < cart.length; i++) {
-        if (cart[i].id === productId) { cart[i].qty++; saveCart(cart); return; }
+        if (cart[i].id === productId) {
+            cart[i].qty++;
+            saveCart(cart);
+            return;
+        }
     }
     cart.push({ id: productId, qty: 1 });
     saveCart(cart);
 }
+
 function removeFromCart(productId) {
     var cart = getCart();
     var newCart = [];
     for (var i = 0; i < cart.length; i++) {
-        if (cart[i].id !== productId) newCart.push(cart[i]);
+        if (cart[i].id !== productId) {
+            newCart.push(cart[i]);
+        }
     }
     saveCart(newCart);
 }
+
 function updateQty(productId, delta) {
     var cart = getCart();
     for (var i = 0; i < cart.length; i++) {
@@ -32,22 +46,23 @@ function updateQty(productId, delta) {
         }
     }
 }
-function updateCartBadge() {
+
+function updateCartZnachok() {
     var count = 0;
     var cart = getCart();
-    for (var i = 0; i < cart.length; i++) { count += cart[i].qty; }
+    for (var i = 0; i < cart.length; i++) count += cart[i].qty;
     var links = document.querySelectorAll('.header__cart');
     for (var j = 0; j < links.length; j++) {
-        var badge = links[j].querySelector('.cart-badge');
+        var znachok = links[j].querySelector('.cart-znachok');
         if (count > 0) {
-            if (!badge) {
-                badge = document.createElement('span');
-                badge.className = 'cart-badge';
-                links[j].appendChild(badge);
+            if (!znachok) {
+                znachok = document.createElement('span');
+                znachok.className = 'cart-znachok';
+                links[j].appendChild(znachok);
             }
-            badge.textContent = count;
-        } else {
-            if (badge) badge.remove();
+            znachok.textContent = count;
+        } else if (znachok) {
+            znachok.remove();
         }
     }
 }
@@ -96,14 +111,19 @@ document.addEventListener('DOMContentLoaded', function () {
         var v = el.value.trim();
         if (el.hasAttribute('required') && !v) { el.classList.add('error'); return false; }
         if (v) {
-            if (el.type === 'email') {
-                if (v.indexOf('@') === -1 || v.indexOf('.') === -1) { el.classList.add('error'); return false; }
+            if (el.type === 'email' && (v.indexOf('@') === -1 || v.indexOf('.') === -1)) {
+                el.classList.add('error'); return false;
             }
-            if (el.id === 'phone' || el.id === 'orderPhone') {
-                var dc = 0; for (var ic = 0; ic < v.length; ic++) { if (v[ic] >= '0' && v[ic] <= '9') dc++; }
+            if ((el.id === 'phone' || el.id === 'orderPhone')) {
+                var dc = 0;
+                for (var i = 0; i < v.length; i++) {
+                    if (v[i] >= '0' && v[i] <= '9') dc++;
+                }
                 if (dc < 11) { el.classList.add('error'); return false; }
             }
-            if ((el.id === 'name' || el.id === 'orderName') && v.length < 2) { el.classList.add('error'); return false; }
+            if ((el.id === 'name' || el.id === 'orderName') && v.length < 2) {
+                el.classList.add('error'); return false;
+            }
         }
         if (v) el.classList.add('valid');
         return true;
@@ -119,17 +139,32 @@ document.addEventListener('DOMContentLoaded', function () {
             card.className = 'product-card';
             card.innerHTML =
                 '<div class="product-card__image"><img src="' + p.img + '" alt="' + p.name + '" loading="lazy"></div>' +
+                '<div class="product-card__content">' +
                 '<div class="product-card__name">' + p.name + '</div>' +
                 '<div class="product-card__type">' + p.type + '</div>' +
                 '<div class="product-card__price">' + formatPrice(p.price) + '</div>' +
-                '<button class="product-card__btn" onclick="addToCart(' + p.id + ');this.textContent=\'\u2713 \u0414\u043e\u0431\u0430\u0432\u043b\u0435\u043d\u043e\';this.classList.add(\'added\');setTimeout(function(){this.textContent=\'\u0412 \u043a\u043e\u0440\u0437\u0438\u043d\u0443\';this.classList.remove(\'added\')}.bind(this),1500)">В корзину</button>';
+                '</div>' +
+                '<button class="product-card__btn">' + 'В корзину' + '</button>';
+            var btn = card.querySelector('.product-card__btn');
+            var productId = p.id;
+            btn.onclick = (function (id, element) {
+                return function () {
+                    addToCart(id);
+                    element.textContent = '✓ Добавлено';
+                    element.classList.add('added');
+                    setTimeout(function () {
+                        element.textContent = 'В корзину';
+                        element.classList.remove('added');
+                    }, 1500);
+                };
+            })(productId, btn);
             container.appendChild(card);
         }
     }
 
     var popularItems = [];
-    for (var pi = 0; pi < products.length; pi++) {
-        if (products[pi].popular) popularItems.push(products[pi]);
+    for (var i = 0; i < products.length; i++) {
+        if (products[i].popular) popularItems.push(products[i]);
     }
     renderProductCards('popularProducts', popularItems);
 
@@ -148,11 +183,11 @@ document.addEventListener('DOMContentLoaded', function () {
         function renderCatalog() {
             var sizes = [], brands = [], priceMin = 0, priceMax = Infinity;
 
-            for (var si = 0; si < sizeChecks.length; si++) {
-                if (sizeChecks[si].checked) sizes.push(sizeChecks[si].value);
+            for (var i = 0; i < sizeChecks.length; i++) {
+                if (sizeChecks[i].checked) sizes.push(sizeChecks[i].value);
             }
-            for (var bi = 0; bi < brandChecks.length; bi++) {
-                if (brandChecks[bi].checked) brands.push(brandChecks[bi].value);
+            for (var i = 0; i < brandChecks.length; i++) {
+                if (brandChecks[i].checked) brands.push(brandChecks[i].value);
             }
 
             var fromVal = priceFrom ? parseFloat(priceFrom.value) : NaN;
@@ -161,8 +196,8 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!isNaN(toVal) && toVal > 0) priceMax = toVal;
 
             var filtered = [];
-            for (var fi = 0; fi < products.length; fi++) {
-                var p = products[fi];
+            for (var i = 0; i < products.length; i++) {
+                var p = products[i];
                 if (sizes.length > 0 && sizes.indexOf(p.size) === -1) continue;
                 if (brands.length > 0 && brands.indexOf(p.brand) === -1) continue;
                 if (p.price < priceMin || p.price > priceMax) continue;
@@ -186,8 +221,8 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         function resetFilters() {
-            for (var ri = 0; ri < sizeChecks.length; ri++) sizeChecks[ri].checked = false;
-            for (var rj = 0; rj < brandChecks.length; rj++) brandChecks[rj].checked = false;
+            for (var i = 0; i < sizeChecks.length; i++) sizeChecks[i].checked = false;
+            for (var i = 0; i < brandChecks.length; i++) brandChecks[i].checked = false;
             if (priceFrom) priceFrom.value = '';
             if (priceTo) priceTo.value = '';
             if (sortSelect) sortSelect.value = 'popular';
@@ -197,7 +232,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (applyBtn) applyBtn.addEventListener('click', renderCatalog);
         if (resetBtn) resetBtn.addEventListener('click', resetFilters);
         if (sortSelect) sortSelect.addEventListener('change', renderCatalog);
-
         renderCatalog();
     }
 
@@ -205,9 +239,10 @@ document.addEventListener('DOMContentLoaded', function () {
     var nav = document.getElementById('mainNav');
     if (burger && nav) {
         burger.addEventListener('click', function () {
-            var isOpen = nav.classList.toggle('open');
+            nav.classList.toggle('open');
             burger.classList.toggle('open');
-            burger.setAttribute('aria-expanded', isOpen);
+            var expanded = nav.classList.contains('open');
+            burger.setAttribute('aria-expanded', expanded);
         });
     }
 
@@ -224,22 +259,23 @@ document.addEventListener('DOMContentLoaded', function () {
             var subtotal = 0;
             var itemCount = 0;
 
-            for (var ci = 0; ci < cart.length; ci++) {
+            for (var i = 0; i < cart.length; i++) {
                 var pr = null;
-                for (var pj = 0; pj < products.length; pj++) {
-                    if (products[pj].id === cart[ci].id) { pr = products[pj]; break; }
+                for (var j = 0; j < products.length; j++) {
+                    if (products[j].id === cart[i].id) { pr = products[j]; break; }
                 }
                 if (!pr) continue;
-                var total = pr.price * cart[ci].qty;
+                var total = pr.price * cart[i].qty;
                 subtotal += total;
-                itemCount += cart[ci].qty;
+                itemCount += cart[i].qty;
 
-                var div = document.createElement('div');
-                div.className = 'cart-item';
-                div.setAttribute('data-id', cart[ci].id);
-                div.setAttribute('data-price', pr.price);
-                div.innerHTML =
-                    '<div class="cart-item__image" style="background:#D9D9D9;border-radius:10px;overflow:hidden"><img src="' + pr.img + '" style="width:100%;height:100%;object-fit:cover" alt="' + pr.name + '"></div>' +
+                var item = document.createElement('div');
+                item.className = 'cart-item';
+                item.setAttribute('data-id', cart[i].id);
+                item.setAttribute('data-price', pr.price);
+                item.innerHTML =
+                    '<div class="cart-item__image" style="background:#D9D9D9;border-radius:10px;overflow:hidden"><img src="'
+                     + pr.img + '" style="width:100%;height:100%;object-fit:cover" alt="' + pr.name + '"></div>' +
                     '<div class="cart-item__info">' +
                     '<h3 class="cart-item__name">' + pr.name + '</h3>' +
                     '<p class="cart-item__desc">' + pr.type + '</p>' +
@@ -248,18 +284,18 @@ document.addEventListener('DOMContentLoaded', function () {
                     '<div class="cart-item__price">' + formatPrice(pr.price) + '</div>' +
                     '<div class="cart-item__qty">' +
                     '<button class="cart-item__qty-btn" data-dir="minus">−</button>' +
-                    '<span class="cart-item__qty-val">' + cart[ci].qty + '</span>' +
+                    '<span class="cart-item__qty-val">' + cart[i].qty + '</span>' +
                     '<button class="cart-item__qty-btn" data-dir="plus">+</button>' +
                     '</div>' +
                     '<div class="cart-item__total">' + formatPrice(total) + '</div>';
-                cartBody.appendChild(div);
+                cartBody.appendChild(item);
             }
 
             var delivery = subtotal > 0 ? 1500 : 0;
-            var total = subtotal + delivery;
+            var totalCost = subtotal + delivery;
             if (cartCountEl) cartCountEl.textContent = itemCount;
             if (subtotalEl) subtotalEl.textContent = formatPrice(subtotal);
-            if (totalEl) totalEl.textContent = formatPrice(total);
+            if (totalEl) totalEl.textContent = formatPrice(totalCost);
             if (cartHeader) cartHeader.style.display = cart.length === 0 ? 'none' : '';
 
             if (cart.length === 0) {
@@ -270,17 +306,15 @@ document.addEventListener('DOMContentLoaded', function () {
         cartBody.addEventListener('click', function (e) {
             var btn = e.target.closest('.cart-item__qty-btn');
             if (btn) {
-                var item = btn.closest('.cart-item');
-                var id = parseInt(item.dataset.id);
+                var id = parseInt(btn.closest('.cart-item').dataset.id);
                 if (btn.dataset.dir === 'plus') updateQty(id, 1);
                 else if (btn.dataset.dir === 'minus') updateQty(id, -1);
                 renderCart();
                 return;
             }
-            var removeBtn = e.target.closest('.cart-item__remove');
-            if (removeBtn) {
-                var id = parseInt(removeBtn.closest('.cart-item').dataset.id);
-                removeFromCart(id);
+            var del = e.target.closest('.cart-item__remove');
+            if (del) {
+                removeFromCart(parseInt(del.closest('.cart-item').dataset.id));
                 renderCart();
             }
         });
@@ -318,14 +352,9 @@ document.addEventListener('DOMContentLoaded', function () {
             searchResults.innerHTML = '';
         }
 
-        for (var sb = 0; sb < searchBtns.length; sb++) {
-            searchBtns[sb].onclick = openSearch;
-        }
+        for (var i = 0; i < searchBtns.length; i++) searchBtns[i].onclick = openSearch;
         searchClose.onclick = closeSearch;
-
-        overlay.onclick = function (e) {
-            if (e.target === overlay) closeSearch();
-        };
+        overlay.onclick = function (e) { if (e.target === overlay) closeSearch(); };
 
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape' && overlay.classList.contains('open')) closeSearch();
@@ -337,9 +366,9 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!q) { searchResults.innerHTML = '<div class="search-overlay__empty">Начните вводить название гитары</div>'; return; }
 
             var matches = [];
-            for (var mi = 0; mi < products.length; mi++) {
-                if (products[mi].name.toLowerCase().indexOf(q) !== -1 || products[mi].type.toLowerCase().indexOf(q) !== -1) {
-                    matches.push(products[mi]);
+            for (var i = 0; i < products.length; i++) {
+                if (products[i].name.toLowerCase().indexOf(q) !== -1 || products[i].type.toLowerCase().indexOf(q) !== -1) {
+                    matches.push(products[i]);
                 }
             }
 
@@ -349,35 +378,43 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             var html = '';
-            for (var mj = 0; mj < matches.length; mj++) {
-                var pr = matches[mj];
-                html += '<div class="search-overlay__result" data-id="' + pr.id + '">' +
-                    '<img class="search-overlay__result-img" src="' + pr.img + '" alt="' + pr.name + '" loading="lazy">' +
+            for (var i = 0; i < matches.length; i++) {
+                var p = matches[i];
+                html += '<div class="search-overlay__result" data-id="' + p.id + '">' +
+                    '<img class="search-overlay__result-img" src="' + p.img + '" alt="' + p.name + '" loading="lazy">' +
                     '<div class="search-overlay__result-info">' +
-                    '<div class="search-overlay__result-name">' + pr.name + '</div>' +
-                    '<div class="search-overlay__result-type">' + pr.type + '</div>' +
+                    '<div class="search-overlay__result-name">' + p.name + '</div>' +
+                    '<div class="search-overlay__result-type">' + p.type + '</div>' +
                     '</div>' +
-                    '<div class="search-overlay__result-price">' + formatPrice(pr.price) + '</div>' +
+                    '<div class="search-overlay__result-price">' + formatPrice(p.price) + '</div>' +
                     '</div>';
             }
             searchResults.innerHTML = html;
         });
 
         searchResults.addEventListener('click', function (e) {
-            var result = e.target.closest('.search-overlay__result');
-            if (result) {
-                closeSearch();
-                window.location.href = 'catalog.html';
-            }
+            var res = e.target.closest('.search-overlay__result');
+            if (res) { closeSearch(); window.location.href = 'catalog.html'; }
         });
     }
 
     var filtersToggle = document.getElementById('filtersToggle');
     var filtersSidebar = document.getElementById('filtersSidebar');
+    var filtersClose = document.getElementById('filtersClose');
     if (filtersToggle && filtersSidebar) {
         filtersToggle.addEventListener('click', function () {
-            filtersSidebar.classList.toggle('open');
+            filtersSidebar.classList.add('open');
+            document.body.style.overflow = 'hidden';
         });
+        if (filtersClose) filtersClose.addEventListener('click', function () { closeFilters(); });
+        filtersSidebar.addEventListener('click', function (e) { if (e.target === filtersSidebar) closeFilters(); });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && filtersSidebar.classList.contains('open')) closeFilters();
+        });
+        function closeFilters() {
+            filtersSidebar.classList.remove('open');
+            document.body.style.overflow = '';
+        }
     }
 
     var contactForm = document.getElementById('contactForm');
@@ -391,9 +428,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var submitBtn = contactForm.querySelector('.btn--wide');
 
         if (inputs.phone) {
-            inputs.phone.addEventListener('input', function () {
-                this.value = maskPhone(this.value);
-            });
+            inputs.phone.addEventListener('input', function () { this.value = maskPhone(this.value); });
             inputs.phone.addEventListener('focus', function () {
                 if (!this.value) this.value = '+7 (';
                 this.setSelectionRange(this.value.length, this.value.length);
@@ -424,10 +459,9 @@ document.addEventListener('DOMContentLoaded', function () {
         contactForm.addEventListener('submit', function (e) {
             e.preventDefault();
             var isValid = true;
-            for (var fj = 0; fj < fieldIds.length; fj++) {
-                if (!checkField(inputs[fieldIds[fj]])) isValid = false;
+            for (var fi = 0; fi < fieldIds.length; fi++) {
+                if (!checkField(inputs[fieldIds[fi]])) isValid = false;
             }
-
             if (!isValid) {
                 var firstErr = contactForm.querySelector('.error');
                 if (firstErr) firstErr.focus();
@@ -436,32 +470,30 @@ document.addEventListener('DOMContentLoaded', function () {
 
             submitBtn.classList.add('loading');
 
-            function sendMessage() {
-                fetch('/send-message', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        name: inputs.name.value.trim(),
-                        phone: inputs.phone.value.trim(),
-                        email: inputs.email.value.trim(),
-                        message: inputs.message ? inputs.message.value.trim() : ''
-                    })
-                }).then(function (r) {
-                    if (r.ok) { showSuccess(); }
-                    else { throw new Error('Сервер вернул ' + r.status); }
-                }).catch(function (err) {
-                    submitBtn.classList.remove('loading');
-                    alert('Ошибка: ' + err.message + '. Убедись, что сервер запущен (server.py)');
-                });
-            }
-
             function showSuccess() {
                 submitBtn.classList.remove('loading');
-                contactForm.querySelector('.contact-form__groups').style.display = 'none';
-                contactForm.querySelector('.contact-form__success').classList.add('show');
+                var groups = contactForm.querySelector('.contact-form__groups');
+                if (groups) groups.style.display = 'none';
+                var success = contactForm.querySelector('.contact-form__success');
+                if (success) success.classList.add('show');
             }
 
-            sendMessage();
+            fetch('/send-message', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: inputs.name.value.trim(),
+                    phone: inputs.phone.value.trim(),
+                    email: inputs.email.value.trim(),
+                    message: inputs.message ? inputs.message.value.trim() : ''
+                })
+            }).then(function (r) {
+                if (r.ok) showSuccess();
+                else throw new Error('Сервер вернул ' + r.status);
+            }).catch(function (err) {
+                submitBtn.classList.remove('loading');
+                alert('Ошибка: ' + err.message + '. Убедись, что сервер запущен (server.py)');
+            });
         });
     }
 
@@ -477,7 +509,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         function openModal() {
             var c = getCart(), cnt = 0;
-            for (var ci = 0; ci < c.length; ci++) cnt += c[ci].qty;
+            for (var i = 0; i < c.length; i++) cnt += c[i].qty;
             if (cnt === 0) return;
             modal.classList.add('open');
             document.body.style.overflow = 'hidden';
@@ -509,9 +541,7 @@ document.addEventListener('DOMContentLoaded', function () {
             };
 
             if (orderInputs.phone) {
-                orderInputs.phone.addEventListener('input', function () {
-                    this.value = maskPhone(this.value);
-                });
+                orderInputs.phone.addEventListener('input', function () { this.value = maskPhone(this.value); });
             }
 
             var orderFields = ['name', 'phone', 'email', 'address'];
@@ -538,16 +568,14 @@ document.addEventListener('DOMContentLoaded', function () {
             form.addEventListener('submit', function (e) {
                 e.preventDefault();
                 var isValid = true;
-                for (var oj = 0; oj < orderFields.length; oj++) {
-                    if (!checkField(orderInputs[orderFields[oj]])) isValid = false;
+                for (var oi = 0; oi < orderFields.length; oi++) {
+                    if (!checkField(orderInputs[orderFields[oi]])) isValid = false;
                 }
-
                 if (!isValid) {
                     var firstErr = form.querySelector('.error');
                     if (firstErr) firstErr.focus();
                     return;
                 }
-
                 saveCart([]);
                 renderCart();
                 formEl.style.display = 'none';
@@ -556,6 +584,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    updateCartBadge();
+    updateCartZnachok();
 
 });

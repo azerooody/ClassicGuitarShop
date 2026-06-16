@@ -9,7 +9,7 @@
 </head>
 <body>
     <header class="header">
-        <div class="container header__inner">
+        <div class="container header__vnutri">
             <a href="index.html" class="header__logo">ClassicGuitarShop</a>
             <nav class="header__nav" id="mainNav">
                 <a href="index.html" class="header__link">Главная</a>
@@ -47,8 +47,11 @@
                     <button class="filters__toggle" id="filtersToggle">Фильтры</button>
                     
                     <aside class="filters" id="filtersSidebar">
-                        <div class="filters__inner">
-                            <h3 class="filters__title">Фильтры</h3>
+                        <div class="filters__vnutri">
+                            <div class="filters__header">
+                                <h3 class="filters__title">Фильтры</h3>
+                                <button class="filters__close" id="filtersClose" aria-label="Закрыть фильтры">✕</button>
+                            </div>
                             
                             <div class="filter-group">
                                 <label class="filter__label">Цена, ₽</label>
