@@ -1520,7 +1520,7 @@ ul {
         padding: 120px 0 60px;
     }
     .hero_content {
-        padding-left: 0;
+        width: 100%;
         align-items: center;
         text-align: center;
     }
